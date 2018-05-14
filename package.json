@@ -1,0 +1,29 @@
+{
+  "name": "treehouse-content-scraper",
+  "version": "1.0.0",
+  "description": "Team treehouse techdegree-project-6 build a content scraper",
+  "main": "scraper.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OmariBennett/techdegree-project-6.git"
+  },
+  "keywords": [
+    "teamtreehouse",
+    "treehouse",
+    "tech-degree",
+    "content-scraper"
+  ],
+  "author": "Omari Bennett",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/OmariBennett/techdegree-project-6/issues"
+  },
+  "homepage": "https://github.com/OmariBennett/techdegree-project-6#readme",
+  "dependencies": {
+    "csvdata": "^1.4.0",
+    "osmosis": "^1.1.6"
+  }
+}
