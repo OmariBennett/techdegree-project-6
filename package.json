@@ -4,6 +4,7 @@
   "description": "Team treehouse techdegree-project-6 build a content scraper",
   "main": "scraper.js",
   "scripts": {
+     "start": "node scraper.js" ,
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

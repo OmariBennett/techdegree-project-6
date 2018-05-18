@@ -22,16 +22,27 @@ function formatDate(date) {
     "November", "December"
   ];
 
-  const day = date.getDate();
-  const month = date.getMonth();
-  const year = date.getFullYear();
+  const day = date.getDate(),
+  		month = date.getMonth(),
+  		year = date.getFullYear();
 
   return `${year}-${month}-${day}`; // show current date-time in console
 }
 
+const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thur', 'Fri', 'Sat'],
+	  monthOfYear = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+const currentDay = daysOfWeek.filter((day, idx) => {if(idx === new Date().getDay()) return day}),
+	  CurrnetMonth = monthOfYear.filter((month, idx) => {if(idx === new Date().getMonth()) return month});
+
+const date = new Date(),
+	  errMessage = `${currentDay.toString()} ${CurrnetMonth.toString()} ${date.getDate()} ${date.getFullYear()}`
+		+ `${date.getUTCHours()}:${date.getUTCMinutes()}:${date.getUTCSeconds()} GMT-${date.getTimezoneOffset()} (PST)`;
+
 const scrapePopulations = () => {
   return new Promise((resolve, reject) => {
     let results = [];
+
     osmosis
 	.get('http://www.shirts4mike.com/shirts.php')
 	.find('.products li a')
@@ -43,8 +54,10 @@ const scrapePopulations = () => {
 	.set({'title': 'h1', 'price': 'span'}) // price & title
 	.data(result => console.log(result))
     .data(item => results.push(item))
-    // .log(console.log)
-    .error(console.log)
+    .error(error => {
+    	const err = `${errMessage} < ${error} >\n`
+    	fs.appendFileSync('scraper-error.log', err, {'flags': 'a'})
+    })
     .done(() => resolve(results));
   });
 }
@@ -52,9 +65,7 @@ const scrapePopulations = () => {
 /* Program your scraper to check for a folder called ‘data’.
 	If the folder doesn’t exist, the scraper should create one.
 	If the folder does exist, the scraper should do nothing.*/
-if (!fs.existsSync('./data')){
-   fs.mkdirSync('data');
-}
+if (!fs.existsSync('./data')) fs.mkdirSync('data');
 
 /* Scraping and Saving Data:
 	The scraper should get the price, title, url and image url from the product page and save this information into a CSV file.
@@ -72,14 +83,14 @@ scrapePopulations().then(data => {
 			"Url": `http://www.shirts4mike.com/${x.url}`,
 			"Time": new Date()
 		})
-		console.log(shirts)
-		csvFile.write(`./data/${formatDate(new Date())}.csv`, shirts, {header: 'Title,Price,ImageURL,Url,Time'})
-	})
-})
-
+		console.log(shirts);
+		csvFile.write(`./data/${formatDate(new Date())}.csv`, shirts, {header: 'Title,Price,ImageURL,Url,Time'});
+	});
+});
 
 /* NOTE:
 	To get an "Exceeds Expectations" grade for this project, you'll need to complete each of the items in this section. See the rubric in the "How You'll Be Graded" tab above for details on how you'll be graded.
 	If you’re shooting for the "Exceeds Expectations" grade, it is recommended that you mention so in your submission notes.
 	// Passing grades are final. If you try for the "Exceeds Expectations" grade, but miss an item and receive a “Meets Expectations” grade, you won’t get a second chance.
 	Exceptions can be made for items that have been misgraded in review.*/
+
