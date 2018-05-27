@@ -11,7 +11,8 @@
 		Has been updated in the last six months*/
 	
 const fs = require('fs'),
-	  osmosis = require('osmosis'),
+	  rp = require('request-promise'),
+	  cheerio = require('cheerio'),
 	  csvFile = require('csvdata');
 
 function formatDate(date) {
@@ -36,31 +37,8 @@ const currentDay = daysOfWeek.filter((day, idx) => {if(idx === new Date().getDay
 	  CurrnetMonth = monthOfYear.filter((month, idx) => {if(idx === new Date().getMonth()) return month});
 
 const date = new Date(),
-	  errMessage = `${currentDay.toString()} ${CurrnetMonth.toString()} ${date.getDate()} ${date.getFullYear()}`
+	  fullDate = `${currentDay.toString()} ${CurrnetMonth.toString()} ${date.getDate()} ${date.getFullYear()}`
 		+ `${date.getUTCHours()}:${date.getUTCMinutes()}:${date.getUTCSeconds()} GMT-${date.getTimezoneOffset()} (PST)`;
-
-const scrapePopulations = () => {
-  return new Promise((resolve, reject) => {
-    let results = [];
-
-    osmosis
-	.get('http://www.shirts4mike.com/shirts.php')
-	.find('.products li a')
-	.set({'url': '@href'}) // url
-	.follow('@href')
-	.find('.shirt-picture span')
-	.set({'img': '@src'}) // image url
-	.find('.shirt-details')
-	.set({'title': 'h1', 'price': 'span'}) // price & title
-	.data(result => console.log(result))
-    .data(item => results.push(item))
-    .error(error => {
-    	const err = `${errMessage} < ${error} >\n`
-    	fs.appendFileSync('scraper-error.log', err, {'flags': 'a'})
-    })
-    .done(() => resolve(results));
-  });
-}
 
 /* Program your scraper to check for a folder called ‘data’.
 	If the folder doesn’t exist, the scraper should create one.
@@ -73,20 +51,48 @@ if (!fs.existsSync('./data')) fs.mkdirSync('data');
 
 /* Assume that the the column headers in the CSV need to be in a certain order to be correctly entered into a database.
 	They should be in this order: Title, Price, ImageURL, URL, and Time*/
-scrapePopulations().then(data => {
-	const shirts = []
-	data.map(x => {
-		shirts.push({
-			"Title": x.title.split(",").join("").slice(4),
-			"Price": x.price.slice(1),
-			"ImageURL": x.img,
-			"Url": `http://www.shirts4mike.com/${x.url}`,
-			"Time": new Date()
+const url = `http://www.shirts4mike.com/shirts.php`,
+	  shirtsUrl = [],
+	  shirtsCatalog = [],
+	  opt = { url: url, json: true };
+
+rp(opt).then((fullCatalogData)=> {
+			fullCatalogData
+				.substr(fullCatalogData.indexOf('<li><a href="'), 987)
+				.split('</li>')
+				.map(x => shirtsUrl.push(x.substring(13, 29)));
+
+			shirtsUrl.pop();
+	 		scrapePopulations(shirtsUrl);
 		})
-		console.log(shirts);
-		csvFile.write(`./data/${formatDate(new Date())}.csv`, shirts, {header: 'Title,Price,ImageURL,Url,Time'});
-	});
-});
+		.catch(function (err) {
+			const errMessage = `Crawling failed... \n\tError Status ${err.statusCode}\n\t${err.message}\n\t${fullDate}\n`;
+			fs.appendFileSync('scraper-error.log', errMessage, {'flags': 'a'});
+    	});
+
+function scrapePopulations(shirtsUrl) {
+	let i = 0;
+	function next() {
+		if(i < shirtsUrl.length) {
+			let opt2 = { url: `http://www.shirts4mike.com/${shirtsUrl[i]}`, json: true}
+
+			rp(opt2).then((individualShirtData)=> {
+				const $ = cheerio.load(individualShirtData)
+				shirtsCatalog.push({
+					"Title": $('title').text(),
+					"Price": $('.price, span').text().trim(),
+					"ImageURL": $('img, span').html().trim(),
+					"URL":  `http://www.shirts4mike.com/${shirtsUrl[i]}`,
+					"Time": fullDate
+				})
+				csvFile.write(`./data/${formatDate(new Date())}.csv`, shirtsCatalog, {header: 'Title,Price,ImageURL,URL,Time'});
+				i++;
+				return next();
+			})
+		}
+	}
+	return next();
+}
 
 /* NOTE:
 	To get an "Exceeds Expectations" grade for this project, you'll need to complete each of the items in this section. See the rubric in the "How You'll Be Graded" tab above for details on how you'll be graded.
